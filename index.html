@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>手写数字识别</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/signature_pad/1.5.3/signature_pad.min.js"></script>
+</head>
+<body>
+<canvas style="border: 3px solid #000" id="signature-canvas" width="200" height="200"></canvas>
+<button type="button" class="buttonclear clear" id="clear" data-action="clear">重签</button>
+<button type="button" class="buttonclear clear" id="save" data-action="clear">确定</button>
+<br>
+<div id="content">
+
+</div>
+</body>
+<script type="text/javaScript">
+	var canvas = document.getElementById('signature-canvas');
+	var signaturePad = new SignaturePad(canvas, { backgroundColor: '#FFF', penColor: 'rgb(0, 0, 0)' ,minWidth:15});
+	var saveButton = document.getElementById('save');
+	var cancelButton = document.getElementById('clear');
+	$("#save").click(function (event) {
+		// 签名为空的判断
+		if(signaturePad.isEmpty()){
+			return;
+		}
+		// signaturePad.jSignature('getData');
+		var imgStr = signaturePad.toDataURL('image/png');
+		//获取到image的base64 可以把这个传到后台解析成图片
+		//imgStr = data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAfgAAAL2CAYAAA......
+		//去掉data:image/png;base64,我们只要后面的部分iVBORw0KGgoAAAANSUhEUgAAAfgAAAL2CAYAAA......
+        // console.log(imgStr)
+		imgStr=imgStr.substring(22,imgStr.length);
+        // console.log(imgStr)
+
+		$.ajax({
+			type: "POST",
+			url: "http://127.0.0.1:5000/predict",
+			data:{
+			    image:imgStr
+            },
+			success: function(data){
+                $("#content").html("")
+                let html=""
+                for(let i in data.predictions){
+                    html+="<span style='font-size: 50px'>"+data.predictions[i].label+"</span>&nbsp;&nbsp;&nbsp;&nbsp;<span style='font-size: 50px'>"+data.predictions[i].probability.toFixed(5)+"</span><br>"
+                }
+                $("#content").html(html)
+                signaturePad.clear();
+            }
+		});
+
+	});
+	$("#clear").click( function (event) {
+		signaturePad.clear();
+	});
+	function resizeCanvas() {
+		var ratio = Math.max(window.devicePixelRatio || 1, 1); // 清除画布
+		canvas.width = canvas.offsetWidth * ratio;
+		canvas.height = canvas.offsetHeight * ratio;
+		canvas.getContext("2d").scale(ratio, ratio);
+		signaturePad.clear();
+	}
+    function dataURL2Blob(dataurl){
+        var arr = dataurl.split(',');
+        var mime = arr[0].match(/:(.*?);/)[1];
+        var bstr = atob(arr[1]);
+        var n = bstr.length;
+        var u8arr = new Uint8Array(n);
+        while(n--){
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], {type:mime});
+    }
+	// function dataURL2Blob(dataURL){
+    //   var binaryString =  dataURL.split(",")[1];
+    //   var mimeType = dataURL.split(",")[0].match(/:(.*);/)[1];
+    //   var length = binaryString.length;
+    //
+    //   var ua = new Uint8Array(length);
+    //
+    //   while(length--){
+    //     ua[length] = binaryString.charCodeAt(length);
+    //   }
+    //
+    //   return new Blob([ua.buffer], {type: mimeType});
+    // }
+</script>
+</html>
