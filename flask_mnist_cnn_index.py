@@ -99,4 +99,4 @@ def index():
 if __name__ == '__main__':
    load_model()
    CORS(app, supports_credentials=True)
-   app.run()
+   app.run(host='0.0.0.0')
